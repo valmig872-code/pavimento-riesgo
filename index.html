@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riesgo de fallas en pavimento flexible</title>
+<meta name="description" content="Predicción de riesgo de fallas en pavimento flexible (piel de cocodrilo, fisuras, baches, ahuellamiento, desprendimiento) a partir de datos del SENAMHI y de la estructura del pavimento.">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<header>
+  <h1>Riesgo de fallas en pavimento flexible</h1>
+  <p class="sub">Datos hidrometeorológicos del SENAMHI + estructura del pavimento (capas, espesores y CBR) → tipo de falla probable y capa crítica, por mes y por temporada.</p>
+  <p class="small">Todo se calcula en su navegador: los archivos no se suben a ningún servidor.</p>
+</header>
+<main>
+<nav class="tabs" id="tabs">
+  <button data-tab="datos" class="on">1. Datos SENAMHI</button>
+  <button data-tab="via">2. Vía y estructura</button>
+  <button data-tab="res">3. Resultados</button>
+  <button data-tab="umb">4. Umbrales</button>
+  <button data-tab="val">5. Validación</button>
+  <button data-tab="exp">6. Exportar</button>
+</nav>
+<div id="banner"></div>
+
+<!-- 1. DATOS -->
+<section class="tab on" id="tab-datos">
+  <div class="card">
+    <h2 style="margin-top:0">Cargar datos del SENAMHI</h2>
+    <p class="small">Archivo TXT/CSV sin encabezado con columnas <code>año mes día pp tmax tmin</code> (faltante = <code>-99.9</code>), o con encabezado (<code>fecha, pp, tmax, tmin, caudal</code>). También se acepta Excel (.xlsx), aunque los Excel que convierten faltantes en 0 no son recomendables: use el TXT original.</p>
+    <div class="grid">
+      <div><label for="f-datos">Archivo de datos diarios</label><input type="file" id="f-datos" accept=".txt,.csv,.xlsx,.xls"></div>
+      <div><label for="f-nombre">Nombre de la estación (para el reporte)</label><input type="text" id="f-nombre" placeholder="Ej.: Lampa"></div>
+      <div><label for="f-caudal">Serie de caudal (opcional, CSV fecha,caudal en m³/s)</label><input type="file" id="f-caudal" accept=".txt,.csv,.xlsx"></div>
+      <div><label for="f-umbral-q">Umbral de caudal de avenida (m³/s)</label><input type="number" id="f-umbral-q" min="0" step="any" placeholder="175 (umbral rojo Río Lampa)"></div>
+    </div>
+    <p><button class="sec" id="btn-demo" type="button">Cargar datos DEMO (sintéticos, solo para probar)</button></p>
+    <div id="msg-datos"></div>
+  </div>
+  <div id="calidad"></div>
+</section>
+
+<!-- 2. VIA -->
+<section class="tab" id="tab-via">
+  <div class="aviso"><b>Valores iniciales de ejemplo.</b> Reemplácelos por los datos reales de su vía antes de interpretar los resultados.</div>
+  <div class="card">
+    <h2 style="margin-top:0">Características de la vía</h2>
+    <div class="grid">
+      <div><label for="v-tipo">Tipo de vía</label><select id="v-tipo"></select></div>
+      <div><label for="v-trafico">Nivel de tráfico pesado</label><select id="v-trafico"><option value="bajo">Bajo</option><option value="medio" selected>Medio</option><option value="alto">Alto</option></select></div>
+      <div><label for="v-esal">ESAL de diseño (opcional; si lo deja vacío se usa un valor típico provisional)</label><input type="number" id="v-esal" min="0" step="any" placeholder="Ej.: 2000000"></div>
+      <div><label for="v-drenaje">Drenaje</label><select id="v-drenaje"><option value="">Sin dato</option><option value="bueno">Bueno</option><option value="regular" selected>Regular</option><option value="deficiente">Deficiente</option></select></div>
+      <div><label for="v-pend">Pendiente longitudinal (%) (opcional)</label><input type="number" id="v-pend" min="0" step="any"></div>
+      <div><label for="v-edad">Edad de la carpeta (años) (opcional)</label><input type="number" id="v-edad" min="0" step="any"></div>
+      <div><label for="v-suelo">Tipo de suelo de la subrasante</label><select id="v-suelo"></select></div>
+      <div><label><input type="checkbox" id="v-sat"> El CBR de las capas es de ensayo saturado (4 días)</label></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Estructura del pavimento (espesores y CBR)</h2>
+    <p class="small">Marque solo las capas que existen. La carpeta y la subrasante siempre existen. El CBR de la subrasante es obligatorio.</p>
+    <div class="cap-row"><b>Carpeta asfáltica</b><span></span><div><label>Espesor (cm)</label><input type="number" id="c-carp-e" value="10" min="0" step="any"></div><div></div></div>
+    <div class="cap-row"><label><input type="checkbox" id="c-base-u" checked> <b>Base granular</b></label><span></span><div><label>Espesor (cm)</label><input type="number" id="c-base-e" value="25" min="0" step="any"></div><div><label>CBR (%)</label><input type="number" id="c-base-c" value="80" min="0" step="any"></div></div>
+    <div class="cap-row"><label><input type="checkbox" id="c-sub-u" checked> <b>Subbase granular</b></label><span></span><div><label>Espesor (cm)</label><input type="number" id="c-sub-e" value="25" min="0" step="any"></div><div><label>CBR (%)</label><input type="number" id="c-sub-c" value="40" min="0" step="any"></div></div>
+    <div class="cap-row"><label><input type="checkbox" id="c-mej-u"> <b>Mejoramiento de subrasante</b></label><span></span><div><label>Espesor (cm)</label><input type="number" id="c-mej-e" value="30" min="0" step="any"></div><div><label>CBR (%)</label><input type="number" id="c-mej-c" value="20" min="0" step="any"></div></div>
+    <div class="cap-row"><b>Subrasante (suelo natural)</b><span></span><div></div><div><label>CBR (%) *</label><input type="number" id="c-subr-c" value="8" min="0.5" step="any"></div></div>
+    <p><button class="pri" id="btn-eval" type="button">Evaluar riesgo de fallas</button> <span class="small">Necesita datos cargados en el paso 1.</span></p>
+    <div id="msg-via"></div>
+  </div>
+</section>
+
+<!-- 3. RESULTADOS -->
+<section class="tab" id="tab-res"><div id="res-vacio" class="card">Cargue los datos (paso 1), complete la vía (paso 2) y pulse «Evaluar riesgo de fallas».</div><div id="res" style="display:none">
+  <div class="card"><h2 style="margin-top:0">Capacidad estructural y capas</h2><div id="estructura"></div></div>
+  <div class="card">
+    <h2 style="margin-top:0">Riesgo por periodo</h2>
+    <div class="grid">
+      <div><label>Ventana</label><select id="r-vent"><option value="mensual">Mensual</option><option value="temporada">Temporada de lluvias</option></select></div>
+      <div><label>Desde (mes)</label><input type="month" id="r-ini"></div>
+      <div><label>Hasta (mes)</label><input type="month" id="r-fin"></div>
+    </div>
+    <p class="leyenda"><span class="lv0">Bajo</span><span class="lv1">Medio</span><span class="lv2">Alto</span><span class="lvn">Sin datos</span></p>
+    <div class="scroll"><table id="tabla-riesgo"></table></div>
+  </div>
+  <div class="card"><h2 style="margin-top:0">Explicación y capa crítica</h2>
+    <label>Periodo a explicar</label><select id="r-det"></select><div id="detalle"></div></div>
+  <div class="card"><h2 style="margin-top:0">Series del periodo</h2><canvas id="graf-series" height="110"></canvas></div>
+  <div class="card"><h2 style="margin-top:0">Mapa de calor del riesgo mensual (toda la serie)</h2><div class="hm" id="mapas"></div></div>
+  <div class="card"><h2 style="margin-top:0">Indicadores del periodo</h2><div class="scroll"><table id="tabla-ind"></table></div></div>
+</div></section>
+
+<!-- 4. UMBRALES -->
+<section class="tab" id="tab-umb">
+  <div class="card">
+    <h2 style="margin-top:0">Umbrales, reglas y parámetros estructurales</h2>
+    <div id="umb-aviso"></div>
+    <p class="small">Edite el JSON y pulse «Aplicar». Las condiciones llevan <code>estado</code>: <code>LITERATURA</code>, <code>FUENTE_OFICIAL</code> o <code>PROVISIONAL</code>. Los cambios se guardan en este navegador.</p>
+    <textarea id="umb-json" rows="26" spellcheck="false"></textarea>
+    <p><button class="pri" id="umb-aplicar" type="button">Aplicar</button> <button class="sec" id="umb-reset" type="button">Restablecer valores por defecto</button></p>
+    <div id="umb-msg"></div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">Fuentes</h3><div id="fuentes"></div></div>
+  <div class="card"><h3 style="margin-top:0">Referencia climática de la estación (percentiles mensuales)</h3>
+    <p class="small">Sirve para elegir umbrales: los provisionales de precipitación se fijaron cerca de P75 (medio) y P95 (alto) de dic–mar en la estación Lampa 1963-2014. Aquí se muestran los percentiles de SUS datos para dic–mar.</p>
+    <div id="percentiles"></div></div>
+</section>
+
+<!-- 5. VALIDACION -->
+<section class="tab" id="tab-val">
+  <div class="card">
+    <h2 style="margin-top:0">Validación con fallas observadas</h2>
+    <p class="small">Suba un CSV con columnas <code>periodo</code> (AAAA-MM) y una columna 0/1 por falla (<span id="ids-fallas"></span>), o <code>periodo,tipo_falla,observada</code>.</p>
+    <div class="grid"><div><label>Archivo CSV de fallas observadas</label><input type="file" id="f-obs" accept=".csv,.txt"></div>
+    <div><label>Se predice falla cuando el riesgo es…</label><select id="val-corte"><option value="1">Medio o Alto</option><option value="2">Solo Alto</option></select></div></div>
+    <div id="val-res"></div>
+  </div>
+</section>
+
+<!-- 6. EXPORTAR -->
+<section class="tab" id="tab-exp">
+  <div class="card">
+    <h2 style="margin-top:0">Exportar</h2>
+    <p><button class="pri" id="exp-csv" type="button">Descargar CSV (indicadores y riesgo mensual)</button>
+       <button class="sec" id="exp-cfg" type="button">Descargar configuración (JSON)</button>
+       <button class="sec" id="exp-print" type="button">Imprimir / guardar PDF</button></p>
+    <p class="small">El CSV incluye, por mes, los indicadores, el nivel de cada falla y la capa crítica.</p>
+    <h3>Limitaciones del modelo</h3><ul id="limitaciones"></ul>
+  </div>
+</section>
+</main>
+<footer>Modelo de reglas y umbrales: no sustituye un diseño ni una evaluación estructural con ensayos de campo. Valores PROVISIONALES sin respaldo directo en la literatura revisada están marcados como tales.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/motor.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
