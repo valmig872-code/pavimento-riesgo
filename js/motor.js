@@ -102,6 +102,8 @@
     const cbrMej = presentes.includes("mejoramiento") ? cap.mejoramiento.cbr : NaN;
     const cbrEq = PAV.cbrEquivalente(cbrMej, hMej, cap.subrasante.cbr, E.espesor_mejoramiento_referencia_cm);
     const snReqSeco = PAV.snRequerido(esal, PAV.mrPsi(cbrEq, cfg), tipo, cfg);
+    const [cv0, cv1] = E.mr.cbr_validez || [0, 1e9];
+    if (cbrEq < cv0 || cbrEq > cv1) W.push(`El CBR de la plataforma (${fmt(cbrEq)} %) está fuera del rango de validez de la correlación CBR→Mr (${cv0}–${cv1} % saturado): el SN requerido es una extrapolación.`);
 
     /* Vulnerabilidad por capa */
     const vuln = {};
@@ -236,6 +238,68 @@
       }
     }
     return out;
+  };
+
+  /* ---------- Tipo de mantenimiento ----------
+   * Por año calendario, con los niveles mensuales:
+   *  rehabilitación > periódico > rutinario > solo monitoreo; "diario" y "emergencia" son indicadores adicionales. */
+  const RANGO = { ninguno: 0, rutinario: 1, periodico: 2, rehabilitacion: 3 };
+  PAV.RANGO_MANT = RANGO;
+
+  PAV.mantenimiento = function (resMensual, ctx, cfg, ini, fin) {
+    const M = cfg.mantenimiento;
+    const meses = Object.keys(resMensual).sort().filter((k) => (!ini || k >= ini) && (!fin || k <= fin));
+    const porAnio = {};
+    for (const k of meses) (porAnio[k.slice(0, 4)] = porAnio[k.slice(0, 4)] || []).push(k);
+    const razonNominal = ctx.razonSeco, defEstruct = M.rehabilitacion.usar_razon_sn_alto && razonNominal < cfg.estructura.razon_sn.alto;
+    const filas = [], contMes = Array(12).fill(0);
+    for (const [anio, ms] of Object.entries(porAnio)) {
+      let medioMas = 0, altoSup = 0, altoEst = 0, emerg = 0; const diarios = [];
+      for (const k of ms) {
+        const r = resMensual[k];
+        const fl = Object.values(r.fallas).filter((f) => f.nivel !== null);
+        if (fl.some((f) => f.nivel >= 1)) medioMas++;
+        if (fl.some((f) => M.fallas_superficiales.includes(f.fid) && f.nivel === 2)) altoSup++;
+        if (fl.some((f) => M.fallas_estructurales.includes(f.fid) && f.nivel === 2 && f.capa !== "carpeta")) altoEst++;
+        if ((r.amenazas[M.emergencia.amenaza] ?? 0) >= M.emergencia.nivel) emerg++;
+        if (M.diaria.amenazas.some((a) => (r.amenazas[a] ?? 0) >= M.diaria.nivel_min)) { diarios.push(k); contMes[Number(k.slice(5)) - 1]++; }
+      }
+      let clase = "ninguno", motivo = "Ninguna falla alcanza el nivel Medio: solo monitoreo.";
+      if (altoEst >= M.rehabilitacion.meses_alto_estructural_por_anio || defEstruct) {
+        clase = "rehabilitacion";
+        motivo = defEstruct && altoEst < M.rehabilitacion.meses_alto_estructural_por_anio
+          ? `La capacidad estructural nominal es insuficiente (R = ${fmt(razonNominal)} < ${cfg.estructura.razon_sn.alto}).`
+          : `${altoEst} meses con riesgo Alto de falla estructural en capas inferiores (umbral: ${M.rehabilitacion.meses_alto_estructural_por_anio}).`;
+      } else if (altoSup >= M.periodico.meses_alto_superficial_por_anio || medioMas >= M.periodico.meses_medio_o_mas_por_anio) {
+        clase = "periodico";
+        motivo = altoSup >= M.periodico.meses_alto_superficial_por_anio ? `${altoSup} meses con riesgo Alto de falla superficial.` : `${medioMas} meses con riesgo Medio o Alto.`;
+      } else if (medioMas >= M.rutinario.meses_medio_o_mas_por_anio) {
+        clase = "rutinario"; motivo = `${medioMas} mes(es) con riesgo Medio o Alto.`;
+      }
+      filas.push({ anio, meses: ms.length, medioMas, altoSup, altoEst, emergencia: emerg, diarioMeses: diarios, clase, motivo });
+    }
+    /* Clase típica = mediana de los rangos anuales */
+    const rangos = filas.map((f) => RANGO[f.clase]).sort((a, b) => a - b);
+    const med = rangos.length ? rangos[Math.floor(rangos.length / 2)] : 0;   /* mediana superior (conservadora) */
+    const tipica = Object.keys(RANGO).find((k) => RANGO[k] === med) || "ninguno";
+    const n = filas.length || 1;
+    const aniosDiaria = filas.filter((f) => f.diarioMeses.length).length, aniosEmerg = filas.filter((f) => f.emergencia).length;
+    const mesesFrecuentes = contMes.map((c, i) => [i, c / n]).filter(([, p]) => p >= 0.3).map(([i]) => i + 1);
+    return { filas, tipica, peor: Object.keys(RANGO).find((k) => RANGO[k] === Math.max(0, ...rangos)) || "ninguno",
+      diaria: aniosDiaria / n >= 0.5, aniosDiaria, aniosEmerg, emergencia: aniosEmerg > 0, mesesFrecuentes, nAnios: filas.length, defEstruct, razonNominal };
+  };
+
+  /* Fallas más probables: frecuencia de meses Alto (y Medio) por falla y capa crítica */
+  PAV.fallasFrecuentes = function (resMensual, ini, fin) {
+    const cont = {};
+    for (const k of Object.keys(resMensual).filter((k) => (!ini || k >= ini) && (!fin || k <= fin))) {
+      for (const f of Object.values(resMensual[k].fallas)) {
+        if (f.nivel === null || f.nivel < 1) continue;
+        const key = f.fid + "|" + f.capa, o = (cont[key] = cont[key] || { fid: f.fid, nombre: f.nombre, capa: f.capa, alto: 0, medio: 0 });
+        if (f.nivel === 2) o.alto++; else o.medio++;
+      }
+    }
+    return Object.values(cont).sort((a, b) => b.alto - a.alto || b.medio - a.medio);
   };
 
   /* Falla dominante: nivel más alto (ante empate, el orden de cfg.fallas) */

@@ -1,4 +1,4 @@
-/* Interfaz de la web: carga de datos, formulario de la vía, resultados, umbrales, validación y exportación. */
+﻿/* Interfaz de la web: carga de datos, formulario de la vía, resultados, umbrales, validación y exportación. */
 (function () {
   const PAV = window.PAV;
   const $ = (id) => document.getElementById(id);
@@ -14,7 +14,9 @@
     "El análisis estructural usa el número estructural (SN, AASHTO-93) y una correlación CBR→Mr; no sustituye un diseño ni ensayos de campo (deflectometría, calicatas, DCP).",
     "Los ciclos hielo-deshielo se aproximan con Tmin ≤ 0 °C y Tmax > 0 °C; no se mide humedad ni temperatura dentro del pavimento.",
     "No se modela la hidrología ni la hidráulica (infiltración, escorrentía, nivel freático). El caudal solo se usa si usted carga una serie.",
-    "Las variables de la vía (edad, drenaje, pendiente, tráfico) actúan como modificadores de ±1 nivel con efectos provisionales."
+    "Las variables de la vía (edad, drenaje, pendiente, tráfico) actúan como modificadores de ±1 nivel con efectos provisionales.",
+    "El tipo de mantenimiento (diario, rutinario, periódico, rehabilitación, emergencia) se decide con criterios PROVISIONALES sobre el número de meses con riesgo Medio/Alto; solo la frecuencia de vigilancia diaria tiene respaldo en la literatura (Han, 2020, estudio de baches en Corea).",
+    "La correlación CBR→Mr es válida para CBR saturado entre 5 y 10 %; fuera de ese rango el SN requerido es una extrapolación. Los coeficientes de capa no se verificaron contra la Guía AASHTO."
   ];
 
   /* ---------------- Estado ---------------- */
@@ -176,6 +178,34 @@
       (c.avisos.length ? '<div class="aviso">' + c.avisos.map(esc).join("<br>") + "</div>" : "");
   }
 
+  /* Veredicto: tipo de mantenimiento requerido para el periodo elegido */
+  const MESES_N = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  function renderVeredicto() {
+    const cfg = E.cfg, T = cfg.mantenimiento.tipos, ini = $("r-ini").value, fin = $("r-fin").value;
+    const m = PAV.mantenimiento(E.resM, E.ctx, cfg, ini, fin);
+    if (!m.nAnios) { $("veredicto").innerHTML = "<h2>¿Qué mantenimiento necesita esta vía?</h2><p>No hay meses evaluables en el periodo elegido.</p>"; return; }
+    const R = PAV.RANGO_MANT, rt = R[m.tipica];
+    const chip = (k, on, txt) => `<span class="chip c-${k}${on ? " on" : ""}">${txt}</span>`;
+    const chips = chip("diario", m.diaria, "Diario (vigilancia)") + chip("rutinario", rt >= 1, "Rutinario") + chip("periodico", rt >= 2, "Periódico") +
+      chip("rehabilitacion", rt >= 3, "Rehabilitación") + chip("emergencia", m.emergencia, "Emergencia") + (rt === 0 ? chip("ninguno", true, "Solo monitoreo") : "");
+    const peorFila = m.filas.reduce((a, b) => (R[b.clase] > R[a.clase] ? b : a), m.filas[0]);
+    const tipicaFila = m.filas.find((f) => f.clase === m.tipica) || m.filas[0];
+    const top = PAV.fallasFrecuentes(E.resM, ini, fin).slice(0, 3);
+    const nombreTipo = { ninguno: "solo monitoreo (sin intervención)", rutinario: "mantenimiento RUTINARIO", periodico: "mantenimiento PERIÓDICO", rehabilitacion: "REHABILITACIÓN / REFUERZO ESTRUCTURAL" }[m.tipica];
+    const activos = ["diario", "rutinario", "periodico", "rehabilitacion", "emergencia"].filter((k) => (k === "diario" ? m.diaria : k === "emergencia" ? m.emergencia : k === "rutinario" ? rt >= 1 : k === "periodico" ? rt >= 2 : rt >= 3));
+    const filas = m.filas.map((f) => `<tr><td>${f.anio}</td><td>${f.meses}</td><td>${f.medioMas}</td><td>${f.altoSup}</td><td>${f.altoEst}</td><td><b>${T[f.clase] ? T[f.clase].nombre : "Solo monitoreo"}</b></td><td>${esc(f.motivo)}</td></tr>`).join("");
+    $("veredicto").innerHTML = `<h2>¿Qué mantenimiento necesita esta vía?</h2>
+      <p style="font-size:1.1rem;margin:.2rem 0">En el periodo ${ini || "inicial"} a ${fin || "final"} (${m.nAnios} año${m.nAnios > 1 ? "s" : ""}), la vía necesita principalmente <b>${nombreTipo}</b>${m.nAnios > 1 ? ` (tipo más frecuente: mediana de los años; el peor año fue ${peorFila.anio}: ${(T[peorFila.clase] || { nombre: "solo monitoreo" }).nombre.toLowerCase()})` : ""}.</p>
+      <div class="chips">${chips}</div>
+      ${top.length ? `<p><b>Fallas más probables:</b> ` + top.map((t) => `${esc(t.nombre)} en la <b>${NOMBRE_CAPA[t.capa]}</b> (${t.alto} meses Alto, ${t.medio} Medio)`).join("; ") + ".</p>" : "<p>Ninguna falla alcanza riesgo Medio o Alto en el periodo.</p>"}
+      <p><b>Por qué:</b> ${esc(tipicaFila.motivo)}</p>
+      ${m.diaria ? `<p><b>Vigilancia diaria</b> recomendada en ${m.aniosDiaria} de ${m.nAnios} años, sobre todo en: ${m.mesesFrecuentes.map((i) => MESES_N[i - 1]).join(", ") || "meses con lluvia intensa, crecida o hielo-deshielo con agua"}.</p>` : ""}
+      ${m.emergencia ? `<p><b>Mantenimiento de emergencia:</b> hubo crecida sobre el umbral en ${m.aniosEmerg} año(s).</p>` : ""}
+      <details open><summary>Qué hacer y con qué frecuencia</summary>${activos.map((k) => `<div class="ficha"><b>${esc(T[k].nombre)}</b><br>${esc(T[k].actividades)}<br><span class="small">Frecuencia: ${esc(T[k].frecuencia)}</span></div>`).join("") || "<p>Solo inspección visual periódica.</p>"}</details>
+      <details><summary>Detalle por año</summary><div class="scroll"><table><tr><th>Año</th><th>Meses evaluados</th><th>Meses ≥ Medio</th><th>Meses Alto (superficial)</th><th>Meses Alto (estructural)</th><th>Tipo requerido</th><th>Motivo</th></tr>${filas}</table></div></details>
+      <p class="small">${esc(cfg.mantenimiento.nota)} Es una orientación por reglas, no un programa de conservación: confírmela con una inspección en campo.</p>`;
+  }
+
   function periodosRango() {
     const v = $("r-vent").value, ini = $("r-ini").value, fin = $("r-fin").value;
     if (v === "mensual") return Object.keys(E.resM).sort().filter((k) => (!ini || k >= ini) && (!fin || k <= fin));
@@ -195,7 +225,7 @@
     $("tabla-riesgo").innerHTML = h;
     $("r-det").innerHTML = per.map((k) => `<option value="${k}">${k}</option>`).join("");
     if (per.length) $("r-det").value = per[per.length - 1];
-    renderDetalle(); renderSeries(); renderTablaInd(per);
+    renderVeredicto(); renderDetalle(); renderSeries(); renderTablaInd(per);
   }
 
   function renderDetalle() {
@@ -233,7 +263,7 @@
   function renderMapas() {
     const cont = $("mapas"); cont.innerHTML = "";
     const ks = Object.keys(E.resM).sort(), y0 = Number(ks[0].slice(0, 4)), y1 = Number(ks[ks.length - 1].slice(0, 4)), filas = y1 - y0 + 1;
-    const dark = getComputedStyle(document.body).color.startsWith("rgb(2");
+    const dark = false;
     for (const [fid, f] of Object.entries(E.cfg.fallas)) {
       const w = 300, mx = 34, my = 18, ch = Math.max(8, Math.min(14, Math.floor(420 / filas))), h = my + filas * ch + 6, dpr = window.devicePixelRatio || 1;
       const wrap = document.createElement("div"); wrap.innerHTML = `<div class="small"><b>${esc(f.nombre)}</b></div>`;
@@ -324,6 +354,9 @@
     $("f-caudal").addEventListener("change", onCaudal);
     $("btn-demo").addEventListener("click", () => fijarSerie(demoDatos(), ["DEMO: datos sintéticos generados en su navegador."], "DEMO", true));
     $("btn-eval").addEventListener("click", evaluar);
+    [["c-base-u", "row-base"], ["c-sub-u", "row-sub"], ["c-mej-u", "row-mej"]].forEach(([c, r]) => {
+      const f = () => $(r).classList.toggle("off", !$(c).checked); $(c).addEventListener("change", f); f();
+    });
     ["r-vent", "r-ini", "r-fin"].forEach((id) => $(id).addEventListener("change", renderPeriodo));
     $("r-det").addEventListener("change", renderDetalle);
     $("umb-aplicar").addEventListener("click", aplicarUmbrales);
@@ -336,3 +369,4 @@
   document.addEventListener("DOMContentLoaded", init);
   window.PAV_E = E; // útil para depuración y pruebas
 })();
+

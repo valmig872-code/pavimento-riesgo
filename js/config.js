@@ -1,4 +1,4 @@
-/* Configuración por defecto del modelo (editable en la pestaña "Umbrales" de la web).
+﻿/* Configuración por defecto del modelo (editable en la pestaña "Umbrales" de la web).
  * Cada condición lleva `estado`: LITERATURA | FUENTE_OFICIAL | PROVISIONAL.
  * PROVISIONAL = valor elegido por el autor, SIN respaldo directo en la literatura revisada.
  * Todo valor de este archivo es PROVISIONAL salvo los marcados en `fuentes`.
@@ -71,7 +71,7 @@
       coef_base_defecto: 0.14, coef_subbase_defecto: 0.11,
       drenaje_m: { bueno: 1.0, regular: 0.9, deficiente: 0.75 },
       /* Módulo resiliente del suelo: Mr(psi) = coef * CBR^exp  (correlación tipo MEPDG/TRRL) */
-      mr: { coef_psi: 2555, exponente: 0.64 },
+      mr: { coef_psi: 2555, exponente: 0.64, cbr_validez: [5, 10] },
       /* Pérdida de soporte (CBR efectivo) por saturación */
       perdida_cbr_saturacion: { max: 0.4, factor_si_cbr_saturado: 0.25, factor_drenaje: { bueno: 0.5, regular: 1.0, deficiente: 1.3 } },
       espesor_mejoramiento_referencia_cm: 60,
@@ -206,6 +206,31 @@
     },
     recomendaciones_estado: "PROVISIONAL (criterio técnico general, no proviene de la literatura revisada)",
 
+    /* ---- Tipo de mantenimiento (se decide por año con los niveles de riesgo mensuales) ---- */
+    mantenimiento: {
+      estado: "PROVISIONAL",
+      nota: "Tipos según la práctica habitual en Perú (rutinario, periódico, emergencia) más rehabilitación/refuerzo como intervención mayor. Los criterios de decisión son PROVISIONALES; verifique las definiciones y frecuencias en el manual de mantenimiento vial del MTC.",
+      fallas_superficiales: ["fisura_longitudinal", "fisura_transversal", "desprendimiento", "baches"],
+      fallas_estructurales: ["piel_cocodrilo", "ahuellamiento"],
+      diaria: { amenazas: ["lluvia_intensa", "crecida", "hielo_deshielo_humedo"], nivel_min: 1, estado: "PROVISIONAL", fuente: "han2020 (frecuencia de patrullaje); los criterios de activación son provisionales" },
+      emergencia: { amenaza: "crecida", nivel: 2, estado: "PROVISIONAL" },
+      rehabilitacion: { meses_alto_estructural_por_anio: 3, usar_razon_sn_alto: true, estado: "PROVISIONAL" },
+      periodico: { meses_alto_superficial_por_anio: 2, meses_medio_o_mas_por_anio: 6, estado: "PROVISIONAL" },
+      rutinario: { meses_medio_o_mas_por_anio: 1, estado: "PROVISIONAL" },
+      tipos: {
+        diario: { nombre: "Vigilancia / atención diaria", frecuencia: "Durante los meses con lluvia intensa, crecida o ciclos de hielo-deshielo con agua: patrullaje 2 veces al día durante la lluvia y los 3 días siguientes; cada 3 días el resto del tiempo (Han, 2020, p. 1, estudio de baches en Corea).",
+          actividades: "Patrullaje y registro de baches, limpieza de cunetas y alcantarillas, señalización y bacheo de urgencia." },
+        rutinario: { nombre: "Mantenimiento rutinario", frecuencia: "Todo el año (actividades continuas, con ciclo anual).",
+          actividades: "Limpieza de drenaje y bermas, sellado de fisuras, bacheo superficial, desbroce y señalización." },
+        periodico: { nombre: "Mantenimiento periódico", frecuencia: "Cada varios años (típicamente 3 a 6; criterio provisional).",
+          actividades: "Riego de sello, lechada/micropavimento, tratamiento superficial o recapeo de la carpeta; reposición de capa superficial." },
+        rehabilitacion: { nombre: "Rehabilitación / refuerzo estructural", frecuencia: "Intervención mayor, fuera del ciclo de mantenimiento; programar antes de la próxima temporada de lluvias.",
+          actividades: "Ensayos (deflectometría, calicatas, DCP), refuerzo con sobrecarpeta estructural, reposición o estabilización de base/subbase, mejoramiento de subrasante y drenaje subterráneo." },
+        emergencia: { nombre: "Mantenimiento de emergencia", frecuencia: "Tras la crecida o el evento (inmediato).",
+          actividades: "Restablecer la transitabilidad, reparar el drenaje y tramos erosionados, bacheo de urgencia." }
+      }
+    },
+
     intervencion_por_capa: {
       carpeta: "Sellado de fisuras, riego de sello, micropavimento o recapeo según el nivel.",
       base: "Reforzar o estabilizar la base, mejorar el drenaje de la plataforma y verificar la granulometría.",
@@ -216,7 +241,7 @@
 
     fuentes: {
       han2020: { cita: "Han, D. (2020). Road Patrol Strategy based on Pothole Occurrence Characteristics considering Rainfall Effects. J. Korea Academia-Industrial Cooperation Society, 21(12), 603-611.", paginas: "1, 8",
-        respalda: "Ocurrencia de baches sensible a lluvias de ~1 mm; efecto de ~3 días. Respalda dia_lluvia_mm=1 y la ventana de 3 días; NO respalda los valores numéricos de acum_3d." },
+        respalda: "VERIFICADO en el PDF: la probabilidad de bache se multiplica por 2.4 con lluvia, el efecto dura 3 días tras la lluvia, +0.46 % por mm y sensibilidad a lluvias de ~1 mm; patrullaje óptimo cada 3 días sin influencia de lluvia y ≥ 2 veces al día en la zona de influencia (p. 1; Tabla 8, p. 8). Respalda dia_lluvia_mm=1, la ventana de 3 días y la frecuencia de vigilancia diaria; NO respalda los valores numéricos de acum_3d." },
       dong2021: { cita: "Dong, Q., Chen, X., Dong, S., Zhang, J. (2021). Classification of pavement climatic regions through unsupervised and supervised machine learnings. J. Infrastructure Preservation and Resilience.", paginas: "3",
         respalda: "Umbrales LTPP: húmedo > 508 mm/año; con congelamiento > 83.3 °C-día." },
       cao2022: { cita: "Cao, H., Chen, T., Zhu, H., Ren, H. (2022). Influence of Frequent Freeze-Thaw Cycles on Performance of Asphalt Pavement in High-Cold and High-Altitude Areas. Coatings, 12(6), 752.", paginas: "12",
@@ -225,8 +250,13 @@
         respalda: "Cualitativo: infiltración de humedad y mal drenaje favorecen el desprendimiento." },
       senamhi_caudal: { cita: "SENAMHI / IDESEP. Tabla 'Caudales del SENAMHI': Río Lampa, estación Puente Lampa, umbral rojo 175 m3/s.", paginas: "1",
         respalda: "Umbral rojo oficial de caudal (pertinencia al tramo por confirmar). Es el valor por defecto; cámbielo si su vía está en otra cuenca." },
-      formulas_ingenieria: { cita: "Ecuación de diseño AASHTO-93 (SN requerido) y correlación Mr = 2555*CBR^0.64 psi (tipo MEPDG). Formulaciones estándar de ingeniería de pavimentos.", paginas: "-",
-        respalda: "NO provienen de la carpeta literatura/ de este proyecto: verifique las ecuaciones y parámetros contra la fuente primaria antes de citarlas. Los coeficientes de capa, ESAL por tipo de vía y la pérdida de CBR por saturación son PROVISIONALES." }
+      aashto93_pavementinteractive: { cita: "AASHTO (1993). Guide for Design of Pavement Structures. Ecuación de diseño de pavimento flexible tal como la reproduce Pavement Interactive, '1993 AASHTO Flexible Pavement Structural Design' (https://pavementinteractive.org/reference-desk/design/structural-design/1993-aashto-flexible-pavement-structural-design/).", paginas: "-",
+        respalda: "VERIFICADO (fuente secundaria, no la Guía original): constantes de la ecuación (9.36, 0.20, 0.40, 1094, 5.19, 2.32, 8.07, ΔPSI/(4.2-1.5)), SN = a1D1 + a2D2m2 + a3D3m3, valores de ZR (75 % = -0.674; 80 % = -0.841; 85 % = -1.037; 90 % = -1.282) y So típico 0.40-0.50. NO verificado: coeficientes de capa (a1 = 0.44, a2, a3), que cada agencia define en su manual." },
+      trrl_mr: { cita: "Correlación Mr(psi) = 2555 * CBR^0.64 (TRRL, Lister 1987), según una fuente secundaria consultada.", paginas: "-",
+        respalda: "Es válida para CBR saturado entre 5 y 10 %. Fuera de ese rango es una extrapolación (el sitio lo advierte). Verificar contra la fuente primaria." },
+      pav_provisional: { cita: "Parámetros propios del modelo.", paginas: "-",
+        respalda: "PROVISIONALES: coeficientes de capa, ESAL por tipo de vía, pérdida de CBR por saturación, umbrales de vulnerabilidad por capa y criterios de tipo de mantenimiento." }
     }
   };
 })(typeof window !== "undefined" ? window : globalThis);
+
