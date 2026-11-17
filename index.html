@@ -11,7 +11,8 @@
 <header><div class="in">
   <h1>Riesgo de fallas en pavimento flexible</h1>
   <p class="sub">Datos del SENAMHI + espesores y CBR de las capas → qué falla es más probable, en qué capa y qué tipo de mantenimiento necesita la vía.</p>
-  <p class="small">Todo se calcula en su navegador: los archivos no se suben a ningún servidor.</p>
+  <div class="hero-chips"><span>Piel de cocodrilo</span><span>Fisuras</span><span>Baches</span><span>Ahuellamiento</span><span>Desprendimiento</span><span>Capa crítica</span><span>Tipo de mantenimiento</span></div>
+  <p class="small" style="margin-top:.8rem">Todo se calcula en su navegador: los archivos no se suben a ningún servidor.</p>
 </div></header>
 <main>
 <nav class="tabs" id="tabs">
@@ -27,6 +28,20 @@
 <!-- 1. DATOS -->
 <section class="tab on" id="tab-datos">
   <div class="info"><b>Cómo se usa:</b> <span class="paso">1</span>cargue los datos diarios del SENAMHI &nbsp; <span class="paso">2</span>indique la vía y sus capas (espesor y CBR) &nbsp; <span class="paso">3</span>pulse «Evaluar» y lea el veredicto de mantenimiento.</div>
+  <div class="galeria">
+    <figure><img src="img/lluvia.jpg" alt="Calle urbana inundada tras una lluvia intensa" loading="lazy"><figcaption><b>La lluvia y el agua acumulada</b> debilitan la base y la subrasante y aceleran baches y piel de cocodrilo.</figcaption></figure>
+    <figure><img src="img/pavimento.jpg" alt="Avenida pavimentada con marcas viales" loading="lazy"><figcaption><b>Una buena estructura y un buen drenaje</b> mantienen el pavimento en servicio: la web estima dónde y cuándo puede fallar.</figcaption></figure>
+  </div>
+  <div class="card cafe">
+    <h3 style="margin-top:0">Ejemplos para probar</h3>
+    <p class="small">Descargue los formatos de ejemplo o pruebe de inmediato con un extracto real de la estación Lampa (2011-2013).</p>
+    <p><button class="sec" id="btn-ejemplo" type="button">Probar con el extracto real de Lampa 2011-2013</button>
+    <a href="ejemplos/1_senamhi_diario_EXTRACTO_REAL_Lampa_2011-2013.txt" download>datos SENAMHI (real)</a> ·
+    <a href="ejemplos/2_caudal_DEMO_formato.csv" download>caudal (DEMO)</a> ·
+    <a href="ejemplos/3_fallas_observadas_DEMO_formato.csv" download>fallas observadas (DEMO)</a> ·
+    <a href="ejemplos/4_ficha_via_EJEMPLO.txt" download>ficha de la vía (qué datos reunir)</a> ·
+    <a href="ejemplos/LEEME.md" download>léame</a></p>
+  </div>
   <div class="card">
     <h2 style="margin-top:0"><span class="paso">1</span>Cargar datos del SENAMHI</h2>
     <p class="small">Archivo TXT/CSV sin encabezado con columnas <code>año mes día pp tmax tmin</code> (faltante = <code>-99.9</code>), o con encabezado (<code>fecha, pp, tmax, tmin, caudal</code>). También se acepta Excel (.xlsx), pero use el TXT original si puede: algunos Excel convierten los faltantes en 0.</p>

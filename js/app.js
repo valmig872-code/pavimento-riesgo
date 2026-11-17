@@ -353,6 +353,13 @@
     $("f-datos").addEventListener("change", onDatos);
     $("f-caudal").addEventListener("change", onCaudal);
     $("btn-demo").addEventListener("click", () => fijarSerie(demoDatos(), ["DEMO: datos sintéticos generados en su navegador."], "DEMO", true));
+    $("btn-ejemplo").addEventListener("click", async () => {
+      try {
+        const r = await fetch("ejemplos/1_senamhi_diario_EXTRACTO_REAL_Lampa_2011-2013.txt"); if (!r.ok) throw new Error("no se pudo descargar el ejemplo");
+        const p = PAV.parseTexto(await r.text());
+        fijarSerie(p.filas, p.avisos.concat(["Extracto real de la estación Lampa (SENAMHI), 2011-2013."]), "Lampa 2011-2013", false);
+      } catch (e) { $("msg-datos").innerHTML = `<div class="err">No se pudo cargar el ejemplo (¿abrió el archivo sin servidor?): ${esc(e.message)}. Descárguelo con el enlace y cárguelo con el botón de archivo.</div>`; }
+    });
     $("btn-eval").addEventListener("click", evaluar);
     [["c-base-u", "row-base"], ["c-sub-u", "row-sub"], ["c-mej-u", "row-mej"]].forEach(([c, r]) => {
       const f = () => $(r).classList.toggle("off", !$(c).checked); $(c).addEventListener("change", f); f();

@@ -1,0 +1,50 @@
+FICHA DE LA VÍA — EJEMPLO DE LO QUE DEBE REUNIR PARA USAR LA WEB
+=====================================================================
+Los valores de la columna "Ejemplo" son INVENTADOS, solo para mostrar el formato.
+Reemplácelos por los de su vía. Todo esto se escribe en la pestaña "2. Vía y capas".
+
+A. DATOS OBLIGATORIOS (sin esto no se puede evaluar)
+-------------------------------------------------------------------------------
+Dato                          Unidad   Ejemplo        Dónde se obtiene (lo más fácil)
+Datos diarios de la estación  TXT      (archivo 1)    Descarga del SENAMHI de la estación más cercana
+Espesor de la carpeta         cm       10             Expediente técnico / planos "as built" / testigos (cores) o calicata
+CBR de la subrasante          %        8              Estudio de suelos del expediente (CBR al 95 % de la MDS, a 0.1")
+Tipo de vía                   -        Avenida        Clasificación de la vía (carretera, avenida, local, camino rural)
+
+B. DATOS QUE MEJORAN MUCHO EL RESULTADO (si los tiene, úselos)
+-------------------------------------------------------------------------------
+Dato                          Unidad   Ejemplo        Dónde se obtiene
+¿Tiene base granular?         sí/no    sí             Expediente técnico / calicata
+  Espesor de la base          cm       25             Expediente técnico / calicata
+  CBR de la base              %        80             Ensayos de control de calidad de obra
+¿Tiene subbase granular?      sí/no    sí             Expediente técnico / calicata
+  Espesor de la subbase       cm       25             Expediente técnico / calicata
+  CBR de la subbase           %        40             Ensayos de control de calidad de obra
+¿Tiene mejoramiento?          sí/no    no             Expediente técnico
+  Espesor y CBR               cm / %   30 / 20        (solo si marcó "sí")
+Tráfico pesado                B/M/A    Medio          Estudio de tráfico o conteo vehicular en campo (1 semana)
+ESAL de diseño                -        3 000 000      Estudio de tráfico del expediente (si no lo tiene, deje vacío)
+Drenaje                       -        Regular        Inspección visual: cunetas y alcantarillas ¿limpias y con salida?
+Tipo de suelo de subrasante   -        Limo           Estudio de suelos (clasificación SUCS/AASHTO)
+
+C. DATOS OPCIONALES
+-------------------------------------------------------------------------------
+Pendiente longitudinal        %        2.5            Plano de perfil o medición con nivel/GPS
+Edad de la carpeta            años     3              Año de la última pavimentación
+Serie de caudal               CSV      (archivo 2)    Solo si hay un río o quebrada que cruce o bordee la vía (SENAMHI/IDESEP)
+Fallas observadas             CSV      (archivo 3)    Inventario de fallas (una vez al mes o por temporada): 1 si se vio, 0 si no
+
+CÓMO DESCARGAR LOS DATOS DEL SENAMHI (resumen)
+-------------------------------------------------------------------------------
+1. Entre al portal de datos hidrometeorológicos del SENAMHI y elija la estación convencional más cercana a su vía.
+2. Pida/descargue la serie diaria de precipitación, temperatura máxima y temperatura mínima.
+3. Deje las columnas en este orden:  año  mes  día  precipitación  Tmax  Tmin   (faltante = -99.9).
+   Si el archivo viene en otro formato (Excel con encabezado), la web también lo lee.
+
+QUÉ ES POSIBLE CONSEGUIR EN LA PRÁCTICA
+-------------------------------------------------------------------------------
+- Si solo consigue la sección A, la web funciona con valores típicos provisionales (p. ej. el ESAL según el tipo de vía).
+  Las capas que no conozca desmárquelas o deje su CBR vacío, y el resultado será menos preciso.
+- Si no sabe una capa (p. ej. no conoce el CBR de la subbase), deje el CBR vacío: el modelo usa un coeficiente
+  típico y le avisa que ese dato falta.
+- Un solo ensayo de CBR de la subrasante y 1–2 calicatas por tramo ya bastan para empezar.
