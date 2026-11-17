@@ -1,4 +1,6 @@
-# Riesgo de fallas en pavimento flexible (sitio web)
+# HidroPav - Predictivo
+
+Riesgo de fallas en pavimento flexible (sitio web).
 
 Sitio estático (HTML + JavaScript, sin servidor) que estima el riesgo de **piel de cocodrilo, fisuras longitudinales y transversales, baches, ahuellamiento y desprendimiento de agregados** a partir de datos diarios del SENAMHI (`año mes día pp tmax tmin`, faltante `-99.9`) y de la estructura del pavimento (espesores y CBR de carpeta, base, subbase, mejoramiento y subrasante). Indica además la **capa crítica** donde se origina cada falla.
 
